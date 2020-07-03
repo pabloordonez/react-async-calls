@@ -27,41 +27,24 @@ class GithubStatusService
     }
 }
 
-function useAsyncCall(promiseFn)
-{
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [content, setContent] = useState([]);
-
-    useEffect(() =>
-    {
-        async function executeFunction()
-        {
-            try
-            {
-                setLoading(true);
-                const result = await promiseFn();
-                setContent(result);
-            }
-            catch (e)
-            {
-                setError(e);
-            }
-            finally
-            {
-                setLoading(false);
-            }
-        }
-
-        executeFunction();
-    }, [promiseFn]);
-
-    return { loading, error, content };
-}
-
 function getDisplayName(WrappedComponent)
 {
     return WrappedComponent.displayName || WrappedComponent.name || 'Component';
+}
+
+function useAsyncCall(promiseFn)
+{
+    const [{loading, error, content }, setState] = useState({ });
+
+    useEffect(() =>
+    {
+        setState({ loading: true });
+        promiseFn().then(
+            x => { setState({ content: x, loading: false }); },
+            e => { setState({ error: e, loading: false });  });
+        },[promiseFn]);
+
+    return { loading, error, content };
 }
 
 function withAsyncContent(Component, promiseFn)
@@ -69,17 +52,12 @@ function withAsyncContent(Component, promiseFn)
     const WithAsyncContent = (...props) =>
     {
         const { loading, error, content } = useAsyncCall(promiseFn);
+        const loadingComponent = loading && (props.loadingComponent || <div>Loading...</div>);
+        const errorComponent = error && (props.errorComponent || <div style={{ color: 'red' }}>{error.message}</div>);
+        const noContentComponent = (!content || content.length === 0) && (props.noContentComponent || <div>There's no content</div>);
+        const contentComponent = <Component content={content} {...props} />;
 
-        if (loading)
-            return props.loadingComponent || <div>Loading...</div>;
-
-        if (error)
-            return props.errorComponent || <div style={{ color: 'red' }}>{error.message}</div>;
-
-        if (!content || content.length === 0)
-            return props.noContentComponent || <div>There's no content</div>;
-
-        return <Component content={content} {...props} />;
+        return loadingComponent || errorComponent || noContentComponent || contentComponent;
     };
 
     WithAsyncContent.displayName = `WithAsyncContent(${getDisplayName(Component)})`;
@@ -88,15 +66,10 @@ function withAsyncContent(Component, promiseFn)
 
 function IncidentList(props)
 {
-    return (
-        <div>
-            {props.content.incidents.map(x => (
-                <div key={x.id}>
-                    <span>{x.name}</span>(<span style={{ color: 'green' }}>{x.status}</span>)
-                </div>
-            ))}
-        </div>
-    );
+    return props.content.incidents.map(x => (
+        <div key={x.id}>
+            <span>{x.name}</span>(<span style={{ color: 'green' }}>{x.status}</span>)
+        </div>));
 }
 
 // We needed to create the service call as an object here,
