@@ -34,15 +34,15 @@ function getDisplayName(WrappedComponent)
 
 function useAsyncCall(promiseFn)
 {
-    const [{loading, error, content }, setState] = useState({ });
+    const [{ loading, error, content }, setState] = useState({});
 
     useEffect(() =>
     {
         setState({ loading: true });
         promiseFn().then(
-            x => { setState({ content: x, loading: false }); },
-            e => { setState({ error: e, loading: false });  });
-        },[promiseFn]);
+            x => setState({ content: x, loading: false }),
+            e => setState({ error: e, loading: false }));
+    }, [promiseFn]);
 
     return { loading, error, content };
 }
